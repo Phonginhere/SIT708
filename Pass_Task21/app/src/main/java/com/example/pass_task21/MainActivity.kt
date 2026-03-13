@@ -22,7 +22,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pass_task21.ui.theme.Pass_Task21Theme
+import kotlin.compareTo
 import kotlin.text.get
+import kotlin.math.round
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +81,9 @@ fun UnitConverterApp() {
     var destUnit    by remember { mutableStateOf("AUD$") }
     var sourceExpanded by remember { mutableStateOf(false) }
     var destExpanded   by remember { mutableStateOf(false) }
+
+    val positiveOnlySources = setOf("$", "mpg", "US", "nmi")
+    val allowNegative = sourceUnit !in positiveOnlySources
 
     // ── SOURCE dropdown: only valid INPUT units ───────────────────────────────
     val sourceDisplayUnits = listOf(
@@ -187,6 +192,10 @@ fun UnitConverterApp() {
                                         if (destUnit !in compatible) {
                                             destUnit = compatible.firstOrNull() ?: destUnit
                                         }
+                                        if (unit in positiveOnlySources && inputValue.toDoubleOrNull()?.let { it < 0 } == true) {
+                                            inputValue = ""
+                                            outputValue = ""
+                                        }
                                         outputValue = ""
                                     }
                                 )
@@ -199,7 +208,28 @@ fun UnitConverterApp() {
 
                 OutlinedTextField(
                     value = inputValue,
-                    onValueChange = { inputValue = it },
+                    onValueChange = { raw ->
+                        // allow digits + one dot, and optional leading '-' only for temperature sources
+                        val filtered = raw.filterIndexed { index, c ->
+                            c.isDigit() ||
+                                    c == '.' ||
+                                    (c == '-' && index == 0 && allowNegative)
+                        }
+
+                        // keep only first dot and first leading minus
+                        val normalized = buildString {
+                            var hasDot = false
+                            filtered.forEachIndexed { i, c ->
+                                when {
+                                    c == '.' && !hasDot -> { append(c); hasDot = true }
+                                    c == '-' && i == 0 -> append(c)
+                                    c.isDigit() -> append(c)
+                                }
+                            }
+                        }
+
+                        inputValue = normalized
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Input value...", color = Color.Black) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -215,10 +245,15 @@ fun UnitConverterApp() {
         GroupedSection(label = "PROCESS") {
             Button(
                 onClick = {
-                    val inputNum = inputValue.toDoubleOrNull()
-                    outputValue = if (inputNum != null)
-                        performConversion(inputNum, sourceUnit, destUnit)
-                    else ""
+                    val rawInput = inputValue.trim()
+                    val inputNum = rawInput.toDoubleOrNull()
+
+                    outputValue = when {
+                        rawInput.isEmpty() -> "Error: Please enter a source value"
+                        inputNum == null -> "Error: Invalid number"
+                        sourceUnit in positiveOnlySources && inputNum < 0.0 -> "Error: Value must be positive"
+                        else -> performConversion(inputNum, sourceUnit, destUnit)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A)),
@@ -321,7 +356,30 @@ fun performConversion(value: Double, sourceUnit: String, destUnit: String): Stri
             else -> null
         }
 
-        if (result == null) "Invalid Conversion" else "%.2f".format(result)
+        if (result == null) {
+            "Invalid Conversion"
+        } else {
+            val fuelDistanceUnits = setOf("mpg", "km/L", "US", "Liters", "nmi", "Kilometers")
+            val temperatureUnits = setOf("Celsius", "Fahrenheit", "Kelvin")
+
+            when {
+                // Temperature: nearest whole number, with -2.5 -> -2 and -2.6 -> -3 behavior
+                sourceUnit in temperatureUnits && destUnit in temperatureUnits -> {
+                    round(result).toInt().toString()
+                }
+
+                // Fuel Efficiency & Distance: 3 decimals
+                sourceUnit in fuelDistanceUnits && destUnit in fuelDistanceUnits -> {
+                    "%.3f".format(result)
+                }
+
+                // Currency: 2 decimals
+                else -> {
+                    "%.2f".format(result)
+                }
+            }
+        }
+
 
     } catch (e: Exception) { "Error" }
 }
