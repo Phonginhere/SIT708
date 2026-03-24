@@ -120,8 +120,11 @@ fun UnitConverterApp() {
 // ── Human-readable display labels ─────────────────────────────────────────
     val displayNames = mapOf(
         // Currency (unchanged)
-        "$"          to "$",         "AUD$"       to "AUD$",
-        "€"          to "€",         "¥"          to "¥",         "£" to "£",
+        "US dollars"          to "$",
+        "Australian Dollars"       to "AUD$",
+        "Pounds"          to "€",
+        "Yen"          to "¥",
+        "Euro" to "£",
         // Fuel Efficiency & Distance — full text + symbol
         "Liters"     to "l",
         "Kilometers" to "km",
@@ -133,8 +136,11 @@ fun UnitConverterApp() {
 // ── Dropdown-specific labels (full text for Temperature) ──────────────────
     val dropdownNames = mapOf(
         // Currency (unchanged)
-        "$"          to "$",         "AUD$"       to "AUD$",
-        "€"          to "€",         "¥"          to "¥",         "£" to "£",
+        "$"          to "US dollars",
+        "AUD$"       to "Australian Dollars",
+        "€"          to "Pounds",
+        "¥"          to "Yen",
+        "£" to "Euro",
         // Fuel Efficiency & Distance — full text + symbol (same as displayNames)
         "mpg"        to "Mile per Gallon (mpg)",
         "km/L"       to "Kilometers per Liter (km/L)",
