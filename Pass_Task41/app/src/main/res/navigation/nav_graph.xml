@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/eventListFragment">
+
+    <fragment
+        android:id="@+id/eventListFragment"
+        android:name="com.example.pass_task41.ui.EventListFragment"
+        android:label="Event List">
+
+        <action
+            android:id="@+id/action_list_to_addEdit"
+            app:destination="@id/addEditEventFragment" />
+
+        <action
+            android:id="@+id/action_list_to_edit"
+            app:destination="@id/editEventFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addEditEventFragment"
+        android:name="com.example.pass_task41.ui.AddEditEventFragment"
+        android:label="Add Event">
+
+        <argument
+            android:name="category"
+            app:argType="string"
+            android:defaultValue="Event" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editEventFragment"
+        android:name="com.example.pass_task41.ui.AddEditEventFragment"
+        android:label="Edit Event">
+
+        <argument
+            android:name="eventId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+</navigation>
