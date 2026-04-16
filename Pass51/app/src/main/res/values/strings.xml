@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Pass5.1</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="Home">Home</string>
+    <string name="search_news">Search news…</string>
+    <string name="top_stories">Top Stories</string>
+    <string name="latest_sports_news">Latest Sports News</string>
+    <string name="large_image_desc">News image</string>
+    <string name="related_stories">Related Stories</string>
+    <string name="bookmark_button_desc">Bookmark article</string>
+    <string name="no_bookmarks_message">No bookmarks yet.\\nTap the star icon on a story to save it here.</string>
+    <string name="news_thumbnail">News thumbnail</string>
+    <string name="related_story_image">Related story image</string>
+    <string name="back">← Back</string>
+
+</resources>

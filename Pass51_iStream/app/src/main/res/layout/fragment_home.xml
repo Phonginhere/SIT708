@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/logout"
+            android:id="@+id/btnLogout"
+            android:backgroundTint="#6200EE"
+            android:textColor="#FFFFFF"
+            android:layout_gravity="end"/>
+        <WebView
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:id="@+id/youtubeView"
+            android:visibility="gone"
+            android:layout_marginTop="16dp"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Youtube URL"
+            android:layout_marginTop="16dp"/>
+        <EditText
+            android:id="@+id/etYoutubeUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter YouTube URL"
+            android:inputType="textUri"
+            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:background="@drawable/rounded_edit_text"/>
+        <Button
+            android:id="@+id/btnPlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Play Video"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#03DAC5"
+            android:textColor="#000000"/>
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnAddToPlaylist"
+            android:text="Add to Playlist"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#6200EE"
+            android:textColor="#FFFFFF"/>
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnMyPlaylist"
+            android:text="My Playlist"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#03DAC5"
+            android:textColor="#000000"/>
+
+    </LinearLayout>
+</ScrollView>

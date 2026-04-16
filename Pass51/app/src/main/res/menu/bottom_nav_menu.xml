@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/home_id"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="@string/Home" />
+    <item
+        android:id="@+id/bookmarks_id"
+        android:icon="@android:drawable/btn_star_big_on"
+        android:title="@string/bookmarks" />
+</menu>
