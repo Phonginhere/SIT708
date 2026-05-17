@@ -1,0 +1,12 @@
+{
+  "name": "llm61-stripe-backend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "stripe": "^17.5.0"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.0.0",
+    "typescript": "^5.6.0"
+  }
+}
