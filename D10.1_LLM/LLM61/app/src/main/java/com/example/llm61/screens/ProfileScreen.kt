@@ -1,6 +1,8 @@
 package com.example.llm61.screens
 
+import android.content.Intent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,15 +18,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.llm61.network.LlmUiState
+import com.example.llm61.network.share.QrCodeGenerator
 import com.example.llm61.viewmodel.ProfileViewModel
 import com.example.llm61.viewmodel.UserViewModel
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,8 +35,7 @@ fun ProfileScreen(
     userViewModel: UserViewModel,
     onBackClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onUpgradeClick: () -> Unit,
-    onShareClick: () -> Unit
+    onUpgradeClick: () -> Unit
 ) {
     val profileVM: ProfileViewModel = viewModel()
     val uid = userViewModel.currentUserId
@@ -47,6 +49,18 @@ fun ProfileScreen(
     val totalCorrect by profileVM.totalCorrect(uid).collectAsState(initial = 0)
     val totalIncorrect by profileVM.totalIncorrect(uid).collectAsState(initial = 0)
     val aiSummaryState = profileVM.aiSummaryState
+    var showShareDialog by remember { mutableStateOf(false) }
+
+    if (showShareDialog) {
+        ShareProfileDialog(
+            username = userViewModel.username.ifBlank { "Student" },
+            tier = userViewModel.currentTier,
+            totalQuestions = totalQuestions,
+            totalCorrect = totalCorrect,
+            interests = userViewModel.selectedInterests,
+            onDismiss = { showShareDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -62,13 +76,14 @@ fun ProfileScreen(
         bottomBar = {
             Surface(shadowElevation = 8.dp) {
                 Button(
-                    onClick = onShareClick,
+                    onClick = { showShareDialog = true },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary,
                         contentColor = MaterialTheme.colorScheme.onSecondary
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(16.dp)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -85,7 +100,6 @@ fun ProfileScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // User info card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -123,7 +137,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Stats row — three cards
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCard("Total Questions", totalQuestions.toString(), Modifier.weight(1f))
                 StatCard("Correctly Answered", totalCorrect.toString(), Modifier.weight(1f))
@@ -132,7 +145,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // AI Summary section
             AiSummarySection(
                 state = aiSummaryState,
                 onRequestSummary = { profileVM.requestAiSummary(uid) },
@@ -141,7 +153,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Navigation list — History and Upgrade
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     ListItem(
@@ -160,7 +171,7 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(Modifier.height(80.dp))  // breathing room above the bottomBar
+            Spacer(Modifier.height(80.dp))
         }
     }
 }
@@ -291,7 +302,6 @@ private fun AiSummarySection(
     }
 }
 
-
 @Composable
 private fun TierBadge(tier: String) {
     val (color, label) = when (tier) {
@@ -312,4 +322,106 @@ private fun TierBadge(tier: String) {
             fontWeight = FontWeight.Bold
         )
     }
+}
+
+@Composable
+private fun ShareProfileDialog(
+    username: String,
+    tier: String,
+    totalQuestions: Int,
+    totalCorrect: Int,
+    interests: Set<String>,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val accuracy = if (totalQuestions > 0) (totalCorrect * 100) / totalQuestions else 0
+
+    val tierDisplay = when (tier) {
+        "starter" -> "Starter"
+        "intermediate" -> "Intermediate ⭐"
+        "advanced" -> "Advanced 👑"
+        else -> "Free"
+    }
+    val interestsLine = if (interests.isEmpty()) "None selected"
+    else interests.joinToString(", ")
+
+    val shareText = buildString {
+        appendLine("📚 LLM61 Learning Profile")
+        appendLine()
+        appendLine("👤 $username")
+        appendLine("🎖️ Tier: $tierDisplay")
+        if (totalQuestions > 0) {
+            appendLine("📊 $totalCorrect / $totalQuestions correct ($accuracy%)")
+        }
+        appendLine()
+        append("📌 Interests: $interestsLine")
+    }
+
+    val deepLinkUri = remember(username, tier, totalQuestions, totalCorrect, interests) {
+        QrCodeGenerator.buildProfileShareUri(
+            username = username,
+            tier = tier,
+            totalQuestions = totalQuestions,
+            totalCorrect = totalCorrect,
+            interests = interests
+        )
+    }
+    val qrBitmap = remember(deepLinkUri) {
+        QrCodeGenerator.generateBitmap(deepLinkUri, 512)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Share Profile") },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Image(
+                    bitmap = qrBitmap.asImageBitmap(),
+                    contentDescription = "Profile QR Code",
+                    modifier = Modifier.size(220.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Scan with another phone to view this profile",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                Text(shareText, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        putExtra(Intent.EXTRA_SUBJECT, "My LLM61 Profile")
+                    }
+                    context.startActivity(Intent.createChooser(sendIntent, "Share Profile"))
+                    onDismiss()
+                }) { Text("Share Text") }
+
+                Button(onClick = {
+                    val uri = QrCodeGenerator.saveBitmapToCache(context, qrBitmap)
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(sendIntent, "Share Profile QR"))
+                    onDismiss()
+                }) { Text("Share QR") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }

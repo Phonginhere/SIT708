@@ -1,6 +1,6 @@
 # Task 10.1D — Further Improving LLM-Enhanced Learning Assistant App
 
-A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with three new screens — **Profile**, **History**, and **Upgrade** — and adds persistent quiz history, subscription-based tier purchasing (via Stripe), profile sharing, and a third Gemini-powered AI feature (weak-area analysis). Built in Kotlin with Material 3.
+A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with three new screens — **Profile**, **History**, and **Upgrade** — and adds persistent quiz history, subscription-based tier purchasing (via Stripe), profile sharing with QR code, and a third Gemini-powered AI feature (weak-area analysis). Built in Kotlin with Material 3.
 
 ---
 
@@ -16,13 +16,13 @@ A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with
 | Cancel / resume / schedule downgrade | ✅ |
 | Tier-based question count + AI-generated extra questions | ✅ |
 | Auth0 OAuth login/signup | ✅ |
-| Share Profile button | ✅ (UI only — QR generation in progress) |
+| Share Profile button + QR code | ✅ |
 
 ---
 
 ## Features
 - Eight-screen flow: Login → Interests → Home → Quiz → Results → Profile → History → Upgrade
-- Auth0 OAuth handles authentication (replaces local signup)
+- Auth0 OAuth handles authentication (replaces local signup); silent session restore on relaunch
 - Interest selection: pick up to 10 of 15 topics; edit anytime from Home
 - Personalised Home screen: task count scales with subscription tier
 - **AI Hint** on every quiz question — powered by Google Gemini
@@ -31,6 +31,7 @@ A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with
 - Prompt sent to the model is shown (collapsible) alongside the response
 - Quiz History stored in Room database with expandable per-question detail
 - Three paid subscription tiers via Stripe; tier affects question count and AI extras
+- Share Profile via QR code or text — deep-linkable with `llm61://profile?data={base64-json}`
 - Material 3 theme with `animateContentSize` cards and 400 ms slide + fade route transitions
 
 ---
@@ -74,8 +75,8 @@ A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with
 - Three stat tiles: **Total Questions** / **Correctly Answered** / **Incorrect Answers** (live from Room)
 - **Summarized by AI** section — "Summarize my weak areas" queries Gemini with your recent incorrect questions
 - Navigation list to History and Upgrade screens
-- `Share` button (see **Share Profile**)
-- Tier badges: Free (grey) / Starter (blue) / Intermediate ⭐ (green) / Advanced 👑 (gold)
+- `Share` button — opens dialog with QR code and text share via system share sheet (see **Share Profile**)
+- Tier badges: Free (grey) / Starter (blue) / Intermediate ⭐ (green) / Advanced 🏆 (gold)
 
 ### 7) History — [HistoryScreen.kt](app/src/main/java/com/example/llm61/screens/HistoryScreen.kt) ✨ NEW
 - Chronological list of all past quiz attempts loaded from Room
@@ -93,7 +94,7 @@ A Jetpack Compose Android app that extends the Task 6.1D Learning Assistant with
 |---|---|---|---|
 | Starter | $9.99 | 3 | 0 |
 | Intermediate ⭐ Best Seller | $19.99 | 5 | +2 |
-| Advanced 👑 | $29.99 | 10 | +7 |
+| Advanced 🏆 | $29.99 | 10 | +7 |
 
 - Prorated pricing shown when upgrading mid-billing period
 - Stripe PaymentSheet launched inline for checkout
@@ -111,7 +112,7 @@ Three Gemini-powered utilities satisfy the task's "further improving with LLMs" 
 - **Files:** [QuizScreen.kt](app/src/main/java/com/example/llm61/screens/QuizScreen.kt) + [QuizViewModel.kt](app/src/main/java/com/example/llm61/viewmodel/QuizViewModel.kt)
 - Prompt instructs Gemini **not to reveal the answer** — gives a 1–2 sentence encouraging hint
 - States: Idle → Loading (`Generating hint…`) → Success → Error (`Try Again`)
-- Success shows collapsible `📨 Prompt sent to AI` card + `💡 AI Hint` response card
+- Success shows collapsible `🎨 Prompt sent to AI` card + `💡 AI Hint` response card
 
 ### 2) Explain with AI — Results Screen
 - **Files:** [ResultsScreen.kt](app/src/main/java/com/example/llm61/screens/ResultsScreen.kt) + [ResultsViewModel.kt](app/src/main/java/com/example/llm61/viewmodel/ResultsViewModel.kt)
@@ -160,7 +161,7 @@ Payments are processed via **Stripe PaymentSheet** backed by a Vercel serverless
 
 ## Share Profile
 
-A `Share` button on the Profile screen is wired to the system share sheet. Full QR-code generation (`QrCodeGenerator.kt`) is in progress and will encode the user's public profile stats and selected interests into a scannable code.
+A `Share` button on the Profile screen opens a dialog with two options: share as **QR code** or share as **text** via the system share sheet. [QrCodeGenerator.kt](app/src/main/java/com/example/llm61/network/share/QrCodeGenerator.kt) encodes the user's profile (username, tier, total/correct stats, selected interests) as Base64 JSON into a scannable QR bitmap using the **ZXing** library. The encoded URI follows the scheme `llm61://profile?data={base64-json}`, which the app handles as a deep link via `AppNavigation.kt` — allowing another user to open the shared profile directly.
 
 ---
 
@@ -179,9 +180,9 @@ All base quiz content is hardcoded in [QuestionBank.kt](app/src/main/java/com/ex
 ```
 app/src/main/java/com/example/llm61/
 ├── MainActivity.kt                  # Compose entry point + Material 3 theme
-├── AppNavigation.kt                 # NavHost, 8 routes, slide/fade transitions
+├── AppNavigation.kt                 # NavHost, 9 routes (incl. SHARED_PROFILE deep link), slide/fade transitions
 ├── auth/
-│   └── Auth0Manager.kt              # OAuth login/logout, returns UserInfo
+│   └── Auth0Manager.kt              # OAuth login/logout/session restore, returns UserInfo
 ├── screens/
 │   ├── LoginScreen.kt               # Auth0 login button + error handling
 │   ├── InterestsScreen.kt           # Pick up to 10 of 15 topics
@@ -204,13 +205,13 @@ app/src/main/java/com/example/llm61/
 │   ├── GeminiModels.kt              # Request / response DTOs
 │   ├── LlmUiState.kt                # Idle / Loading / Success / Error
 │   └── share/
-│       └── QrCodeGenerator.kt       # QR code generation (in progress)
+│       └── QrCodeGenerator.kt       # QR code generation + deep link encoding
 ├── data/
 │   ├── QuizModels.kt                # Question, Task, UserAnswer
 │   ├── QuestionBank.kt              # 15 topics × 3 MCQs (hardcoded)
 │   ├── QuestionGenerator.kt         # Gemini-powered extra question generator
 │   ├── local/
-│   │   ├── AppDatabase.kt           # Room database (v1)
+│   │   ├── AppDatabase.kt           # Room database (v6)
 │   │   ├── UserEntity.kt            # User row: auth0Sub, tier, timestamps
 │   │   ├── UserDao.kt
 │   │   ├── UserRepository.kt        # CRUD + tier Flow
@@ -245,6 +246,7 @@ app/src/main/java/com/example/llm61/
 | Authentication | Auth0 Android SDK |
 | Payments | Stripe Android SDK (PaymentSheet) |
 | AI | Google Gemini REST API (`gemini-flash-latest`) |
+| QR Code | ZXing (via QrCodeGenerator) |
 | Icons | Material Icons Extended |
 
 ---
@@ -256,6 +258,10 @@ app/src/main/java/com/example/llm61/
 3. Create / open `local.properties` and add:
    ```
    GEMINI_API_KEY=your_gemini_key_here
+   STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+   VERCEL_BACKEND_URL=https://your-vercel-backend.vercel.app
+   AUTH0_DOMAIN=your_auth0_domain
+   AUTH0_CLIENT_ID=your_auth0_client_id
    ```
 4. Configure **Auth0**: create a Native application in the Auth0 dashboard and update `auth0Domain` / `auth0ClientId` in `strings.xml` (or `local.properties` if wired via BuildConfig)
 5. Configure **Stripe**: set your publishable key and point `PaymentApi` at your Vercel backend URL

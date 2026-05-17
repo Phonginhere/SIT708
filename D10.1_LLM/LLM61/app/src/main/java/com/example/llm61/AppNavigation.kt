@@ -13,6 +13,16 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.navigation.navDeepLink
+import android.content.Intent
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 
 object Routes {
     const val LOGIN = "login"
@@ -24,6 +34,7 @@ object Routes {
     const val HISTORY = "history"
     const val PROFILE = "profile"
     const val UPGRADE = "upgrade"
+    const val SHARED_PROFILE = "shared_profile"
 }
 
 @Composable
@@ -31,9 +42,28 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val userViewModel: UserViewModel = viewModel()
 
+    val context = LocalContext.current
+    DisposableEffect(navController) {
+        val activity = context as ComponentActivity
+        val listener = androidx.core.util.Consumer<Intent> { intent ->
+            navController.handleDeepLink(intent)
+        }
+        activity.addOnNewIntentListener(listener)
+        onDispose { activity.removeOnNewIntentListener(listener) }
+    }
+
+    if (!userViewModel.isSessionChecked) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val startDestination = if (userViewModel.isLoggedIn) Routes.HOME else Routes.LOGIN
+
     NavHost(
         navController = navController,
-        startDestination = Routes.LOGIN,
+        startDestination = startDestination,
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
@@ -160,7 +190,6 @@ fun AppNavigation() {
                 onBackClick = { navController.popBackStack() },
                 onHistoryClick = { navController.navigate(Routes.HISTORY) },
                 onUpgradeClick = { navController.navigate(Routes.UPGRADE) },
-                onShareClick = { /* TODO: wired in Phase 7 */ }
             )
         }
 
@@ -168,6 +197,36 @@ fun AppNavigation() {
             UpgradeScreen(
                 userViewModel = userViewModel,
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "${Routes.SHARED_PROFILE}?data={data}",
+            arguments = listOf(navArgument("data") {
+                type = NavType.StringType
+                defaultValue = ""
+            }),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "llm61://profile?data={data}" }
+            )
+        ) { backStackEntry ->
+            val data = backStackEntry.arguments?.getString("data") ?: ""
+            SharedProfileScreen(
+                sharedData = data,
+                onBackClick = {
+                    val previous = navController.previousBackStackEntry
+                    val previousRoute = previous?.destination?.route
+                    // If we got here from a real screen (warm), just pop back to it.
+                    // Otherwise (cold deep-link), go to HOME if authed, LOGIN otherwise.
+                    if (previousRoute != null && previousRoute != Routes.LOGIN) {
+                        navController.popBackStack()
+                    } else {
+                        val destination = if (userViewModel.isLoggedIn) Routes.HOME else Routes.LOGIN
+                        navController.navigate(destination) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
     }
